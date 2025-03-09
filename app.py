@@ -45,7 +45,8 @@ app.layout = html.Div([
     dcc.Graph(id='mmse-boxplot'),
     dcc.Graph(id='etiv-boxplot'),
     dcc.Graph(id='correlation-heatmap')
-])
+
+], style={'height': '100vh', 'overflowY': 'scroll'})  # Garante que o scroll funcione corretamente
 
 # Callback para atualizar os gráficos e KPIs
 @app.callback(
