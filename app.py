@@ -12,11 +12,23 @@ app = dash.Dash(__name__, server=server)
 df_cross = pd.read_csv("oasis_cross-sectional-processed.csv")
 df_long = pd.read_csv("oasis_longitudinal-processed.csv")
 
+# Ensure EDUC is integer for consistency
+df_cross['Educ'] = df_cross['Educ'].astype(int)
+df_long['EDUC'] = df_long['EDUC'].astype(int)
+
 # Define dashboard layout
 app.layout = html.Div([
     html.H1("Alzheimer's Disease Dashboard", style={'textAlign': 'center'}),
 
+    # KPIs - Resumo dos Principais Resultados
+    html.Div([
+        html.Div([html.H3("Correlation (Educ & MMSE)"), html.P("r = 0.1999 (p < 0.001)")], className="kpi"),
+        html.Div([html.H3("Correlation (Educ & CDR)"), html.P("r = -0.1531 (p = 0.003)")], className="kpi"),
+        html.Div([html.H3("Regression"), html.P("Each additional year of education increases MMSE by 0.2565")], className="kpi"),
+    ], className="kpi-container"),
+
     # Dropdown para selecionar o estudo (Cross-Sectional ou Longitudinal)
+    html.Label("Select Study Type:", style={"font-weight": "bold"}),
     dcc.RadioItems(
         id='study-selector',
         options=[
@@ -27,58 +39,65 @@ app.layout = html.Div([
         inline=True
     ),
 
+    # Tabs dentro da aba para separar gráficos de MMSE e CDR
+    dcc.Tabs(id="education-tabs", value="mmse", children=[
+        dcc.Tab(label="MMSE & Education", value="mmse"),
+        dcc.Tab(label="CDR & Education", value="cdr")
+    ]),
+
     # Scrollable content container
-    html.Div(id='education-analysis-content', style={'height': '80vh', 'overflowY': 'scroll'})
+    html.Div(id='education-analysis-content', style={'height': '75vh', 'overflowY': 'scroll'})
 ])
 
-# Callback para atualizar o conteúdo baseado na escolha do estudo
+# Callback para atualizar o conteúdo baseado na escolha do estudo e aba selecionada
 @app.callback(
     Output('education-analysis-content', 'children'),
-    [Input('study-selector', 'value')]
+    [Input('study-selector', 'value'),
+     Input('education-tabs', 'value')]
 )
-def update_education_analysis(selected_study):
+def update_education_analysis(selected_study, selected_tab):
     if selected_study == 'cross':
-        # Gráficos do Cross-Sectional
-        fig_educ_dist = px.histogram(df_cross, x="Educ", title="Education Level Distribution")
-        fig_mmse_educ = px.box(df_cross, x="Educ", y="MMSE", title="MMSE Scores by Education Level")
-        fig_cdr_educ = px.box(df_cross, x="Educ", y="CDR", title="CDR Scores by Education Level")
+        if selected_tab == "mmse":
+            fig_educ_dist = px.histogram(df_cross, x="Educ", title="Education Level Distribution")
+            fig_mmse_educ = px.box(df_cross, x="Educ", y="MMSE", title="MMSE Scores by Education Level")
 
-        return html.Div([
-            html.H3("Does Education Affect Alzheimer's Risk? (Cross-Sectional Study)", style={'textAlign': 'center'}),
-            html.P("Cross-sectional data suggests that individuals with higher education levels tend to have better cognitive function (higher MMSE) and lower dementia severity (lower CDR)."),
-            
-            dcc.Graph(figure=fig_educ_dist),
-            dcc.Graph(figure=fig_mmse_educ),
-            dcc.Graph(figure=fig_cdr_educ),
+            return html.Div([
+                html.H3("Does Education Affect Alzheimer's Risk? (Cross-Sectional Study)", style={'textAlign': 'center'}),
+                dcc.Graph(figure=fig_educ_dist),
+                dcc.Graph(figure=fig_mmse_educ),
+                html.P("Higher education levels are associated with better cognitive function (higher MMSE)."),
+                html.P("ANOVA test for MMSE: p-value = 0.00014 (Significant)")
+            ])
+        else:
+            fig_cdr_educ = px.box(df_cross, x="Educ", y="CDR", title="CDR Scores by Education Level")
 
-            html.H4("Statistical Results:"),
-            html.P("✅ ANOVA test for MMSE: p-value = 0.00014 (Significant)"),
-            html.P("✅ ANOVA test for CDR: p-value = 0.00142 (Significant)"),
-            html.P("Conclusion: Higher education levels are associated with better cognitive performance and lower dementia severity.")
-        ])
-
+            return html.Div([
+                html.H3("Does Education Affect Dementia Severity? (Cross-Sectional Study)", style={'textAlign': 'center'}),
+                dcc.Graph(figure=fig_cdr_educ),
+                html.P("Individuals with lower education levels tend to have higher dementia severity (higher CDR)."),
+                html.P("ANOVA test for CDR: p-value = 0.00142 (Significant)")
+            ])
     else:
-        # Gráficos do Longitudinal
-        fig_mmse_long = px.box(df_long, x="EDUC", y="MMSE", title="MMSE Scores by Education Level Over Time")
-        fig_cdr_long = px.box(df_long, x="EDUC", y="CDR", title="CDR Scores by Education Level Over Time")
-        fig_mmse_progression = px.line(df_long, x="Visit", y="MMSE", color="EDUC", title="MMSE Progression Over Time by Education Level")
+        if selected_tab == "mmse":
+            fig_mmse_long = px.box(df_long, x="EDUC", y="MMSE", title="MMSE Scores by Education Level Over Time")
+            fig_mmse_progression = px.line(df_long, x="Visit", y="MMSE", color="EDUC", title="MMSE Progression Over Time by Education Level")
 
-        return html.Div([
-            html.H3("Does Education Affect Alzheimer's Progression? (Longitudinal Study)", style={'textAlign': 'center'}),
-            html.P("Longitudinal data suggests that individuals with higher education levels tend to maintain higher MMSE scores over time, while those with lower education levels experience more rapid cognitive decline."),
-            
-            dcc.Graph(figure=fig_mmse_long),
-            dcc.Graph(figure=fig_cdr_long),
-            dcc.Graph(figure=fig_mmse_progression),
+            return html.Div([
+                html.H3("Does Education Affect Cognitive Decline Over Time? (Longitudinal Study)", style={'textAlign': 'center'}),
+                dcc.Graph(figure=fig_mmse_long),
+                dcc.Graph(figure=fig_mmse_progression),
+                html.P("Higher education levels slow cognitive decline over time."),
+                html.P("Regression: Each additional year of education increases MMSE by 0.2565 points.")
+            ])
+        else:
+            fig_cdr_long = px.box(df_long, x="EDUC", y="CDR", title="CDR Scores by Education Level Over Time")
 
-            html.H4("Statistical Results:"),
-            html.P(f"✅ Correlation between Education and MMSE: r = 0.1999 (p = 0.00010)"),
-            html.P(f"✅ Correlation between Education and CDR: r = -0.1531 (p = 0.00303)"),
-            html.P(f"✅ ANOVA for MMSE: p-value = 0.00055 (Significant)"),
-            html.P(f"✅ ANOVA for CDR: p-value = 0.00156 (Significant)"),
-            html.P(f"✅ Regression: Each additional year of education increases MMSE by 0.2565 points."),
-            html.P("Conclusion: Higher education levels slow cognitive decline over time.")
-        ])
+            return html.Div([
+                html.H3("Does Education Affect Dementia Progression? (Longitudinal Study)", style={'textAlign': 'center'}),
+                dcc.Graph(figure=fig_cdr_long),
+                html.P("Lower education levels are associated with faster dementia progression."),
+                html.P("ANOVA for CDR: p-value = 0.00156 (Significant)")
+            ])
 
 # Run the app
 if __name__ == "__main__":
