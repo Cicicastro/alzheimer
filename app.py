@@ -9,8 +9,8 @@ server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
 
 # Carregar os datasets tratados
-cross_sectional_path = "oasis-cross-sectional-processed.csv"
-longitudinal_path = "oasis-longitudinal-processed.csv"
+cross_sectional_path = "oasis_cross-sectional-processed.csv"
+longitudinal_path = "oasis_longitudinal-processed.csv"
 
 df_cross = pd.read_csv(cross_sectional_path)
 df_long = pd.read_csv(longitudinal_path)
