@@ -62,7 +62,7 @@ def update_education_analysis(selected_study, selected_tab):
             fig_mmse_educ = px.box(df_cross, x="Educ", y="MMSE", title="MMSE Scores by Education Level")
 
             return html.Div([
-                html.H3("Does Education Affect Alzheimer's Risk? (Cross-Sectional Study)", style={'textAlign': 'center'}),
+                html.H3("Does Education Affect Alzheimer's Risk?", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_educ_dist),
                 dcc.Graph(figure=fig_mmse_educ),
                 html.P("Higher education levels are associated with better cognitive function (higher MMSE)."),
@@ -72,7 +72,7 @@ def update_education_analysis(selected_study, selected_tab):
             fig_cdr_educ = px.box(df_cross, x="Educ", y="CDR", title="CDR Scores by Education Level")
 
             return html.Div([
-                html.H3("Does Education Affect Dementia Severity? (Cross-Sectional Study)", style={'textAlign': 'center'}),
+                html.H3("Does Education Affect Dementia Severity?", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_cdr_educ),
                 html.P("Individuals with lower education levels tend to have higher dementia severity (higher CDR)."),
                 html.P("ANOVA test for CDR: p-value = 0.00142 (Significant)")
@@ -83,7 +83,7 @@ def update_education_analysis(selected_study, selected_tab):
             fig_mmse_progression = px.line(df_long, x="Visit", y="MMSE", color="EDUC", title="MMSE Progression Over Time by Education Level")
 
             return html.Div([
-                html.H3("Does Education Affect Cognitive Decline Over Time? (Longitudinal Study)", style={'textAlign': 'center'}),
+                html.H3("Does Education Affect Cognitive Decline Over Time?", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_mmse_long),
                 dcc.Graph(figure=fig_mmse_progression),
                 html.P("Higher education levels slow cognitive decline over time."),
@@ -93,7 +93,7 @@ def update_education_analysis(selected_study, selected_tab):
             fig_cdr_long = px.box(df_long, x="EDUC", y="CDR", title="CDR Scores by Education Level Over Time")
 
             return html.Div([
-                html.H3("Does Education Affect Dementia Progression? (Longitudinal Study)", style={'textAlign': 'center'}),
+                html.H3("Does Education Affect Dementia Progression?", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_cdr_long),
                 html.P("Lower education levels are associated with faster dementia progression."),
                 html.P("ANOVA for CDR: p-value = 0.00156 (Significant)")
