@@ -9,7 +9,7 @@ server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
 
 # Load datasets
-cross_sectional_path = "data/oasis_cross-sectional-processed.csv"
+cross_sectional_path = "oasis_cross-sectional-processed.csv"
 df_cross = pd.read_csv(cross_sectional_path)
 
 # Clean dataset (remove missing values in Educ, MMSE, CDR)
