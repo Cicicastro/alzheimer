@@ -1,12 +1,12 @@
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, State
 import pandas as pd
 import plotly.express as px
 from flask import Flask
 
 # Create Flask server (required for Hugging Face Spaces)
 server = Flask(__name__)
-app = dash.Dash(__name__, server=server, suppress_callback_exceptions=True)  # Allows dynamic components
+app = dash.Dash(__name__, server=server, suppress_callback_exceptions=True)
 
 # Load datasets (already processed)
 df_cross = pd.read_csv("oasis_cross-sectional-processed.csv")
@@ -43,7 +43,7 @@ app.layout = html.Div([
 # Callback to display the dataset selection based on chosen analysis
 @app.callback(
     Output('dataset-options-container', 'children'),
-    [Input('analysis-selector', 'value')]
+    Input('analysis-selector', 'value')
 )
 def update_dataset_options(selected_analysis):
     return html.Div([
@@ -63,9 +63,16 @@ def update_dataset_options(selected_analysis):
 @app.callback(
     Output('analysis-content', 'children'),
     [Input('analysis-selector', 'value'),
-     Input('study-selector', 'value')]  # Agora reconhece corretamente o estudo selecionado
+     Input('dataset-options-container', 'children')],
+    State('dataset-options-container', 'children')  # Garante que 'study-selector' já existe
 )
-def update_analysis(selected_analysis, selected_study):
+def update_analysis(selected_analysis, _, dataset_options):
+    # Verifica se o 'study-selector' já foi renderizado
+    if dataset_options:
+        selected_study = dash.callback_context.inputs.get('study-selector.value', 'cross')
+    else:
+        return html.P("Select an option above.")
+
     if selected_analysis == 'education':
         if selected_study == "cross":
             fig_mmse_violin = px.violin(df_cross, x="Educ", y="MMSE", box=True, points="all",
