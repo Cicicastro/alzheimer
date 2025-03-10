@@ -8,6 +8,9 @@ from flask import Flask
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
 
+# Allow dynamically generated components
+app.config.suppress_callback_exceptions = True
+
 # Load datasets
 cross_sectional_path = "oasis_cross-sectional-processed.csv"
 longitudinal_path = "oasis_longitudinal-processed.csv"
