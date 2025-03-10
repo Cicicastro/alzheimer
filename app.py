@@ -16,6 +16,21 @@ df_long = pd.read_csv("oasis_longitudinal-processed.csv")
 df_cross['Educ'] = df_cross['Educ'].astype(int)
 df_long['EDUC'] = df_long['EDUC'].astype(int)
 
+# Convert "Years of Education" (EDUC) to "Education Level" (1 to 5)
+def convert_years_to_level(years):
+    if years <= 8:
+        return 1  # Elementary
+    elif years <= 11:
+        return 2  # Middle School
+    elif years <= 13:
+        return 3  # High School
+    elif years <= 15:
+        return 4  # Associate/Bachelor
+    else:
+        return 5  # Postgraduate
+
+df_long['Educ'] = df_long['EDUC'].apply(convert_years_to_level)
+
 # Define dashboard layout
 app.layout = html.Div([
     html.H1("Alzheimer's Disease Dashboard", style={'textAlign': 'center'}),
@@ -44,19 +59,35 @@ app.layout = html.Div([
 )
 def update_analysis(selected_analysis):
     if selected_analysis == 'education':
-        # Best insights from both datasets
-        fig_mmse_violin = px.violin(df_cross, x="Educ", y="MMSE", box=True, points="all",
-                                    title="MMSE by Education Level")
+        # Bar chart instead of violin plot
+        fig_mmse_bar = px.bar(df_cross.groupby("Educ")["MMSE"].mean().reset_index(),
+                              x="Educ", y="MMSE", 
+                              title="Average MMSE Score by Education Level",
+                              color="Educ",
+                              color_discrete_sequence=px.colors.qualitative.Set2)
+
+        # Scatter plot for MMSE & Education
         fig_mmse_scatter = px.scatter(df_cross, x="Educ", y="MMSE", trendline="ols",
-                                      title="Education vs MMSE (Scatter Plot)")
+                                      title="Education vs MMSE (Scatter Plot)",
+                                      color="Educ",
+                                      color_discrete_sequence=px.colors.qualitative.Set2)
+
+        # Bar chart for CDR by education level
         fig_cdr_bar = px.bar(df_cross.groupby("Educ")["CDR"].mean().reset_index(),
-                             x="Educ", y="CDR", title="Average CDR Score by Education Level")
-        fig_mmse_line = px.line(df_long, x="Visit", y="MMSE", color="EDUC",
-                                title="MMSE Progression Over Time by Education Level")
+                             x="Educ", y="CDR", 
+                             title="Average CDR Score by Education Level",
+                             color="Educ",
+                             color_discrete_sequence=px.colors.qualitative.Set2)
+
+        # Line chart for MMSE over time with grouped education levels
+        fig_mmse_line = px.line(df_long.groupby(["Visit", "Educ"])["MMSE"].mean().reset_index(),
+                                x="Visit", y="MMSE", color="Educ",
+                                title="MMSE Progression Over Time by Education Level",
+                                color_discrete_sequence=px.colors.qualitative.Set2)
 
         return html.Div([
             html.H3("How does education affect Alzheimer's?", style={'textAlign': 'center'}),
-            dcc.Graph(figure=fig_mmse_violin),
+            dcc.Graph(figure=fig_mmse_bar),
             html.P("People with higher education levels tend to have better cognitive function."),
             dcc.Graph(figure=fig_mmse_scatter),
             html.P("Regression analysis shows that each additional year of education increases MMSE by 0.2565 points."),
@@ -67,14 +98,12 @@ def update_analysis(selected_analysis):
         ])
 
     elif selected_analysis == 'gender':
-        # Placeholder until analysis is added
         return html.Div([
             html.H3("Gender & Alzheimer (Coming Soon)", style={'textAlign': 'center'}),
             html.P("This section will analyze whether men and women experience Alzheimer's differently."),
         ])
 
     elif selected_analysis == 'progression':
-        # Placeholder until analysis is added
         return html.Div([
             html.H3("Disease Progression (Coming Soon)", style={'textAlign': 'center'}),
             html.P("This section will explore the average time for conversion to Alzheimer's."),
