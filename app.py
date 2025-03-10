@@ -1,10 +1,16 @@
 import dash
 from dash import dcc, html, Input, Output
+import pandas as pd
+import plotly.express as px
 from flask import Flask
 
 # Create Flask server (required for Hugging Face Spaces)
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
+
+# Load datasets
+cross_sectional_path = "oasis_cross-sectional-processed.csv"
+df_cross = pd.read_csv(cross_sectional_path)
 
 # Layout of the dashboard
 app.layout = html.Div([
@@ -33,7 +39,20 @@ app.layout = html.Div([
 )
 def update_analysis_content(analysis_type):
     if analysis_type == 'descriptive':
-        return html.H3("Descriptive Analysis (Placeholder) - We will add graphs here!")
+        # Boxplot - Relationship between Education and MMSE Score
+        fig_education_mmse = px.box(df_cross, x="Educ", y="MMSE", 
+                                    title="Cognitive Function (MMSE) by Education Level",
+                                    labels={"Educ": "Education Level", "MMSE": "MMSE Score"},
+                                    color="Educ")
+
+        return html.Div([
+            html.H3("Descriptive Analysis"),
+            
+            html.H4("Education & Alzheimer"),
+            dcc.Graph(figure=fig_education_mmse),
+            html.P("Higher education levels are correlated with better cognitive function (higher MMSE scores).")
+        ])
+
     elif analysis_type == 'predictive':
         return html.H3("Predictive Analysis (Placeholder) - We will add graphs here!")
 
