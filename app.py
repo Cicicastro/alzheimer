@@ -31,6 +31,9 @@ def convert_years_to_level(years):
 
 df_long['Educ'] = df_long['EDUC'].apply(convert_years_to_level)
 
+# Define color scheme (use same colors across graphs)
+color_scheme = px.colors.qualitative.Dark24  
+
 # Define dashboard layout
 app.layout = html.Div([
     html.H1("Alzheimer's Disease Dashboard", style={'textAlign': 'center'}),
@@ -59,42 +62,49 @@ app.layout = html.Div([
 )
 def update_analysis(selected_analysis):
     if selected_analysis == 'education':
-        # Bar chart instead of violin plot
+        # Bar chart for MMSE by Education Level
         fig_mmse_bar = px.bar(df_cross.groupby("Educ")["MMSE"].mean().reset_index(),
                               x="Educ", y="MMSE", 
                               title="Average MMSE Score by Education Level",
                               color="Educ",
-                              color_discrete_sequence=px.colors.qualitative.Set2)
+                              color_discrete_sequence=color_scheme)
 
-        # Scatter plot for MMSE & Education
+        # Scatter plot for MMSE & Education (OLS trendline)
         fig_mmse_scatter = px.scatter(df_cross, x="Educ", y="MMSE", trendline="ols",
                                       title="Education vs MMSE (Scatter Plot)",
                                       color="Educ",
-                                      color_discrete_sequence=px.colors.qualitative.Set2)
+                                      color_discrete_sequence=color_scheme)
 
         # Bar chart for CDR by education level
         fig_cdr_bar = px.bar(df_cross.groupby("Educ")["CDR"].mean().reset_index(),
                              x="Educ", y="CDR", 
                              title="Average CDR Score by Education Level",
                              color="Educ",
-                             color_discrete_sequence=px.colors.qualitative.Set2)
+                             color_discrete_sequence=color_scheme)
 
         # Line chart for MMSE over time with grouped education levels
         fig_mmse_line = px.line(df_long.groupby(["Visit", "Educ"])["MMSE"].mean().reset_index(),
                                 x="Visit", y="MMSE", color="Educ",
                                 title="MMSE Progression Over Time by Education Level",
-                                color_discrete_sequence=px.colors.qualitative.Set2)
+                                color_discrete_sequence=color_scheme)
 
         return html.Div([
             html.H3("How does education affect Alzheimer's?", style={'textAlign': 'center'}),
+
             dcc.Graph(figure=fig_mmse_bar),
             html.P("People with higher education levels tend to have better cognitive function."),
+            
             dcc.Graph(figure=fig_mmse_scatter),
-            html.P("Regression analysis shows that each additional year of education increases MMSE by 0.2565 points."),
+            html.P("Regression analysis: Each additional year of education increases MMSE by **0.2565 points**."),
+            html.P("ANOVA test for MMSE: **p-value = 0.00055** (Statistically significant)."),
+            
             dcc.Graph(figure=fig_cdr_bar),
             html.P("Lower education levels are associated with more severe dementia (higher CDR)."),
+            html.P("ANOVA test for CDR: **p-value = 0.00156** (Statistically significant)."),
+
             dcc.Graph(figure=fig_mmse_line),
-            html.P("Cognitive decline is slower for people with higher education levels.")
+            html.P("Cognitive decline appears slower for higher education levels."),
+            html.P("However, for **level 5**, there is a sharp decline after the third visit. This may suggest that people with more education can compensate for Alzheimer's in the early stages, but once the disease progresses, decline accelerates."),
         ])
 
     elif selected_analysis == 'gender':
