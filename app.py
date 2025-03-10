@@ -2,6 +2,7 @@ import dash
 from dash import dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
+from scipy.stats import pearsonr
 from flask import Flask
 
 # Create Flask server (required for Hugging Face Spaces)
@@ -11,6 +12,16 @@ app = dash.Dash(__name__, server=server)
 # Load datasets
 cross_sectional_path = "oasis_cross-sectional-processed.csv"
 df_cross = pd.read_csv(cross_sectional_path)
+
+# Remove missing values in Educ and MMSE
+df_cross = df_cross.dropna(subset=['Educ', 'MMSE'])
+
+# Ensure Educ is an integer (to prevent issues with categories)
+df_cross['Educ'] = df_cross['Educ'].astype(int)
+
+# Compute correlation between Education and MMSE
+corr_value, p_value = pearsonr(df_cross['Educ'], df_cross['MMSE'])
+corr_text = f"The correlation between Education Level and MMSE Score is **{corr_value:.3f}** (p-value = **{p_value:.5f}**)."
 
 # Layout of the dashboard
 app.layout = html.Div([
@@ -49,7 +60,8 @@ def update_analysis_content(analysis_type):
             
             html.H4("Education & Alzheimer"),
             dcc.Graph(figure=fig_education_mmse),
-            html.P("Higher education levels are correlated with better cognitive function (higher MMSE scores).")
+            html.P("Higher education levels are correlated with better cognitive function (higher MMSE scores)."),
+            html.P(corr_text, style={'font-weight': 'bold'})  # Display correlation value
         ])
 
     elif analysis_type == 'predictive':
