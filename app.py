@@ -8,116 +8,108 @@ from flask import Flask
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
 
-# Load datasets (already processed)
-df_cross = pd.read_csv("oasis_cross-sectional-processed.csv")
-df_long = pd.read_csv("oasis_longitudinal-processed.csv")
+# Load datasets
+cross_sectional_path = "oasis_cross-sectional-processed.csv"
+longitudinal_path = "oasis_longitudinal-processed.csv"
 
-# Ensure EDUC is integer for consistency
-df_cross['Educ'] = df_cross['Educ'].astype(int)
-df_long['EDUC'] = df_long['EDUC'].astype(int)
+df_cross = pd.read_csv(cross_sectional_path)
+df_long = pd.read_csv(longitudinal_path)
 
-# Convert "Years of Education" (EDUC) to "Education Level" (1 to 5)
-def convert_years_to_level(years):
-    if years <= 8:
-        return 1  # Elementary
-    elif years <= 11:
-        return 2  # Middle School
-    elif years <= 13:
-        return 3  # High School
-    elif years <= 15:
-        return 4  # Associate/Bachelor
-    else:
-        return 5  # Postgraduate
-
-df_long['Educ'] = df_long['EDUC'].apply(convert_years_to_level)
-
-# Define color scheme (use same colors across graphs)
-color_scheme = px.colors.qualitative.Dark24  
-
-# Define dashboard layout
+# Layout of the dashboard
 app.layout = html.Div([
     html.H1("Alzheimer's Disease Dashboard", style={'textAlign': 'center'}),
 
     # Dropdown to select the type of analysis
-    html.Label("Select an analysis:", style={"font-weight": "bold"}),
     dcc.Dropdown(
-        id='analysis-selector',
+        id='analysis-type',
         options=[
-            {'label': 'Education & Alzheimer', 'value': 'education'},
-            {'label': 'Gender & Alzheimer', 'value': 'gender'},
-            {'label': 'Disease Progression', 'value': 'progression'}
+            {'label': 'Descriptive Analysis', 'value': 'descriptive'},
+            {'label': 'Predictive Analysis', 'value': 'predictive'}
         ],
-        value='education',
+        value='descriptive',
         clearable=False
     ),
+    
+    # Container for second dropdown
+    html.Div(id='analysis-options-container'),
 
-    # Content container
-    html.Div(id='analysis-content', style={'height': '75vh', 'overflowY': 'auto'})
+    # Display selected analysis
+    html.Div(id='analysis-content', style={'height': '80vh', 'overflowY': 'scroll'})
 ])
 
-# Callback to update the displayed analysis content
+# Callback to update the second dropdown based on the first selection
+@app.callback(
+    Output('analysis-options-container', 'children'),
+    [Input('analysis-type', 'value')]
+)
+def update_analysis_dropdown(selected_analysis):
+    if selected_analysis == 'descriptive':
+        return dcc.Dropdown(
+            id='descriptive-analysis',
+            options=[
+                {'label': 'SES & Alzheimer', 'value': 'ses'},
+                {'label': 'Education & Alzheimer', 'value': 'education'},
+                {'label': 'Gender & Alzheimer', 'value': 'gender'},
+                {'label': 'Brain Volume & Alzheimer', 'value': 'brain_volume'}
+            ],
+            value='ses',
+            clearable=False
+        )
+    elif selected_analysis == 'predictive':
+        return dcc.Dropdown(
+            id='predictive-analysis',
+            options=[
+                {'label': 'CDR Progression Over Time', 'value': 'cdr_progression'},
+                {'label': 'Brain Volume Decline', 'value': 'brain_decline'},
+                {'label': 'Education & Cognitive Decline', 'value': 'education_decline'},
+                {'label': 'Time to Dementia Conversion', 'value': 'dementia_conversion'},
+                {'label': 'Gender & Disease Progression', 'value': 'gender_progression'}
+            ],
+            value='cdr_progression',
+            clearable=False
+        )
+    return None
+
+# Callback to update the displayed content based on the selected analysis
 @app.callback(
     Output('analysis-content', 'children'),
-    Input('analysis-selector', 'value')
+    [Input('analysis-type', 'value'),
+     Input('descriptive-analysis', 'value'),
+     Input('predictive-analysis', 'value')]
 )
-def update_analysis(selected_analysis):
-    if selected_analysis == 'education':
-        # Bar chart for MMSE by Education Level
-        fig_mmse_bar = px.bar(df_cross.groupby("Educ")["MMSE"].mean().reset_index(),
-                              x="Educ", y="MMSE", 
-                              title="Average MMSE Score by Education Level",
-                              color="Educ",
-                              color_discrete_sequence=color_scheme)
-
-        # Scatter plot for MMSE & Education (OLS trendline)
-        fig_mmse_scatter = px.scatter(df_cross, x="Educ", y="MMSE", trendline="ols",
-                                      title="Education vs MMSE (Scatter Plot)",
-                                      color="Educ",
-                                      color_discrete_sequence=color_scheme)
-
-        # Bar chart for CDR by education level
-        fig_cdr_bar = px.bar(df_cross.groupby("Educ")["CDR"].mean().reset_index(),
-                             x="Educ", y="CDR", 
-                             title="Average CDR Score by Education Level",
-                             color="Educ",
-                             color_discrete_sequence=color_scheme)
-
-        # Line chart for MMSE over time with grouped education levels
-        fig_mmse_line = px.line(df_long.groupby(["Visit", "Educ"])["MMSE"].mean().reset_index(),
-                                x="Visit", y="MMSE", color="Educ",
-                                title="MMSE Progression Over Time by Education Level",
-                                color_discrete_sequence=color_scheme)
-
-        return html.Div([
-            html.H3("How does education affect Alzheimer's?", style={'textAlign': 'center'}),
-
-            dcc.Graph(figure=fig_mmse_bar),
-            html.P("People with higher education levels tend to have better cognitive function."),
-            
-            dcc.Graph(figure=fig_mmse_scatter),
-            html.P("Regression analysis: Each additional year of education increases MMSE by **0.2565 points**."),
-            html.P("ANOVA test for MMSE: **p-value = 0.00055** (Statistically significant)."),
-            
-            dcc.Graph(figure=fig_cdr_bar),
-            html.P("Lower education levels are associated with more severe dementia (higher CDR)."),
-            html.P("ANOVA test for CDR: **p-value = 0.00156** (Statistically significant)."),
-
-            dcc.Graph(figure=fig_mmse_line),
-            html.P("Cognitive decline appears slower for higher education levels."),
-            html.P("However, for **level 5**, there is a sharp decline after the third visit. This may suggest that people with more education can compensate for Alzheimer's in the early stages, but once the disease progresses, decline accelerates."),
-        ])
-
-    elif selected_analysis == 'gender':
-        return html.Div([
-            html.H3("Gender & Alzheimer (Coming Soon)", style={'textAlign': 'center'}),
-            html.P("This section will analyze whether men and women experience Alzheimer's differently."),
-        ])
-
-    elif selected_analysis == 'progression':
-        return html.Div([
-            html.H3("Disease Progression (Coming Soon)", style={'textAlign': 'center'}),
-            html.P("This section will explore the average time for conversion to Alzheimer's."),
-        ])
+def update_analysis_content(analysis_type, descriptive_option, predictive_option):
+    if analysis_type == 'descriptive':
+        if descriptive_option == 'ses':
+            fig = px.box(df_cross, x='SES', y='CDR', title='SES & Alzheimer')
+            return [dcc.Graph(figure=fig), html.P("Lower SES may be associated with higher dementia risk.")]
+        elif descriptive_option == 'education':
+            fig = px.box(df_cross, x='Educ', y='MMSE', title='Education & Alzheimer')
+            return [dcc.Graph(figure=fig), html.P("Higher education levels are correlated with better cognitive function.")]
+        elif descriptive_option == 'gender':
+            fig = px.histogram(df_cross, x='M/F', color='Group', title='Gender & Alzheimer')
+            return [dcc.Graph(figure=fig), html.P("Does gender influence Alzheimer’s prevalence?")]
+        elif descriptive_option == 'brain_volume':
+            fig = px.box(df_cross, x='Group', y='eTIV', title='Brain Volume & Alzheimer')
+            return [dcc.Graph(figure=fig), html.P("Individuals with Alzheimer’s tend to have smaller brain volume.")]
+    
+    elif analysis_type == 'predictive':
+        if predictive_option == 'cdr_progression':
+            fig = px.line(df_long, x='Visit', y='CDR', color='Group', title='CDR Progression Over Time')
+            return [dcc.Graph(figure=fig), html.P("How does dementia severity change over time?")]
+        elif predictive_option == 'brain_decline':
+            fig = px.line(df_long, x='Visit', y='nWBV', color='Group', title='Brain Volume Decline')
+            return [dcc.Graph(figure=fig), html.P("Does brain shrinkage occur faster in Alzheimer’s patients?")]
+        elif predictive_option == 'education_decline':
+            fig = px.line(df_long, x='Visit', y='MMSE', color='EDUC', title='Education & Cognitive Decline')
+            return [dcc.Graph(figure=fig), html.P("Do individuals with higher education maintain cognitive function longer?")]
+        elif predictive_option == 'dementia_conversion':
+            fig = px.histogram(df_long[df_long['Group'] == 'Converted'], x='Visit', title='Time to Dementia Conversion')
+            return [dcc.Graph(figure=fig), html.P("How long does it take for individuals to develop dementia?")]
+        elif predictive_option == 'gender_progression':
+            fig = px.line(df_long, x='Visit', y='CDR', color='M/F', title='Gender & Disease Progression')
+            return [dcc.Graph(figure=fig), html.P("Does dementia progression differ between men and women?")]
+    
+    return None
 
 # Run the app
 if __name__ == "__main__":
