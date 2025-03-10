@@ -63,17 +63,9 @@ def update_dataset_options(selected_analysis):
 @app.callback(
     Output('analysis-content', 'children'),
     [Input('analysis-selector', 'value'),
-     Input('dataset-options-container', 'children')]  # Prevents callback error
+     Input('study-selector', 'value')]  # Agora reconhece corretamente o estudo selecionado
 )
-def update_analysis(selected_analysis, _):
-    # Avoids error when 'study-selector' is not rendered yet
-    ctx = dash.callback_context
-    if not ctx.triggered:
-        return html.P("Select an option above.")
-
-    # Get selected study type safely
-    selected_study = ctx.inputs.get('study-selector.value', 'cross')
-
+def update_analysis(selected_analysis, selected_study):
     if selected_analysis == 'education':
         if selected_study == "cross":
             fig_mmse_violin = px.violin(df_cross, x="Educ", y="MMSE", box=True, points="all",
@@ -82,7 +74,7 @@ def update_analysis(selected_analysis, _):
                                           title="Education vs MMSE (Scatter Plot)")
 
             return html.Div([
-                html.H3("Education & Alzheimer (One-time evaluation)", style={'textAlign': 'center'}),
+                html.H3("Education & Alzheimer - One-time evaluation", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_mmse_violin),
                 dcc.Graph(figure=fig_mmse_scatter),
                 html.P("Higher education levels are associated with better cognitive function."),
@@ -95,7 +87,7 @@ def update_analysis(selected_analysis, _):
                                     title="MMSE Progression Over Time by Education Level")
 
             return html.Div([
-                html.H3("Education & Alzheimer (Patients followed for years)", style={'textAlign': 'center'}),
+                html.H3("Education & Alzheimer - Patients followed for years", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_mmse_violin_long),
                 dcc.Graph(figure=fig_mmse_line),
                 html.P("Higher education levels slow down cognitive decline."),
