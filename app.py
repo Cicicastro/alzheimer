@@ -42,8 +42,7 @@ def update_analysis_content(analysis_type):
         # Boxplot - Relationship between Education and MMSE Score
         fig_education_mmse = px.box(df_cross, x="Educ", y="MMSE", 
                                     title="Cognitive Function (MMSE) by Education Level",
-                                    labels={"Educ": "Education Level", "MMSE": "MMSE Score"},
-                                    color="Educ")
+                                    labels={"Educ": "Education Level", "MMSE": "MMSE Score"})
 
         return html.Div([
             html.H3("Descriptive Analysis"),
