@@ -6,7 +6,7 @@ from flask import Flask
 
 # Create Flask server (required for Hugging Face Spaces)
 server = Flask(__name__)
-app = dash.Dash(__name__, server=server)
+app = dash.Dash(__name__, server=server, suppress_callback_exceptions=True)  # Allows dynamic components
 
 # Load datasets (already processed)
 df_cross = pd.read_csv("oasis_cross-sectional-processed.csv")
@@ -21,13 +21,13 @@ app.layout = html.Div([
     html.H1("Alzheimer's Disease Dashboard", style={'textAlign': 'center'}),
 
     # Dropdown to select the type of analysis
-    html.Label("📌 Select an analysis:", style={"font-weight": "bold"}),
+    html.Label("Select an analysis:", style={"font-weight": "bold"}),
     dcc.Dropdown(
         id='analysis-selector',
         options=[
-            {'label': '📊 Education & Alzheimer', 'value': 'education'},
-            {'label': '⚖️ Gender & Alzheimer', 'value': 'gender'},
-            {'label': '📈 Disease Progression', 'value': 'progression'}
+            {'label': 'Education & Alzheimer', 'value': 'education'},
+            {'label': 'Gender & Alzheimer', 'value': 'gender'},
+            {'label': 'Disease Progression', 'value': 'progression'}
         ],
         value='education',
         clearable=False
@@ -36,7 +36,7 @@ app.layout = html.Div([
     # Container for the dataset selection (One-time vs Longitudinal)
     html.Div(id='dataset-options-container'),
 
-    # Scrollable content container
+    # Content container
     html.Div(id='analysis-content', style={'height': '75vh', 'overflowY': 'auto'})
 ])
 
@@ -47,12 +47,12 @@ app.layout = html.Div([
 )
 def update_dataset_options(selected_analysis):
     return html.Div([
-        html.Label("📍 Select the study type:", style={"font-weight": "bold"}),
+        html.Label("Select the study type:", style={"font-weight": "bold"}),
         dcc.RadioItems(
             id='study-selector',
             options=[
-                {'label': '🟢 One-time patient evaluation', 'value': 'cross'},
-                {'label': '⏳ Patients followed for years', 'value': 'long'}
+                {'label': 'One-time patient evaluation', 'value': 'cross'},
+                {'label': 'Patients followed for years', 'value': 'long'}
             ],
             value='cross',
             inline=False
@@ -63,9 +63,17 @@ def update_dataset_options(selected_analysis):
 @app.callback(
     Output('analysis-content', 'children'),
     [Input('analysis-selector', 'value'),
-     Input('study-selector', 'value')]
+     Input('dataset-options-container', 'children')]  # Prevents callback error
 )
-def update_analysis(selected_analysis, selected_study):
+def update_analysis(selected_analysis, _):
+    # Avoids error when 'study-selector' is not rendered yet
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return html.P("Select an option above.")
+
+    # Get selected study type safely
+    selected_study = ctx.inputs.get('study-selector.value', 'cross')
+
     if selected_analysis == 'education':
         if selected_study == "cross":
             fig_mmse_violin = px.violin(df_cross, x="Educ", y="MMSE", box=True, points="all",
@@ -77,8 +85,8 @@ def update_analysis(selected_analysis, selected_study):
                 html.H3("Education & Alzheimer (One-time evaluation)", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_mmse_violin),
                 dcc.Graph(figure=fig_mmse_scatter),
-                html.P("✅ Higher education levels are associated with better cognitive function."),
-                html.P("✅ ANOVA test for MMSE: p-value = 0.00014 (Significant)")
+                html.P("Higher education levels are associated with better cognitive function."),
+                html.P("ANOVA test for MMSE: p-value = 0.00014 (Significant)")
             ])
         else:
             fig_mmse_violin_long = px.violin(df_long, x="EDUC", y="MMSE", box=True, points="all",
@@ -90,20 +98,20 @@ def update_analysis(selected_analysis, selected_study):
                 html.H3("Education & Alzheimer (Patients followed for years)", style={'textAlign': 'center'}),
                 dcc.Graph(figure=fig_mmse_violin_long),
                 dcc.Graph(figure=fig_mmse_line),
-                html.P("✅ Higher education levels slow down cognitive decline."),
-                html.P("✅ Regression: Each additional year of education increases MMSE by 0.2565 points.")
+                html.P("Higher education levels slow down cognitive decline."),
+                html.P("Regression: Each additional year of education increases MMSE by 0.2565 points.")
             ])
 
     elif selected_analysis == 'gender':
         return html.Div([
-            html.H3("⚖️ Gender & Alzheimer (Coming Soon)", style={'textAlign': 'center'}),
-            html.P("📌 This section will analyze whether men and women experience Alzheimer's differently."),
+            html.H3("Gender & Alzheimer (Coming Soon)", style={'textAlign': 'center'}),
+            html.P("This section will analyze whether men and women experience Alzheimer's differently."),
         ])
 
     elif selected_analysis == 'progression':
         return html.Div([
-            html.H3("📈 Disease Progression (Coming Soon)", style={'textAlign': 'center'}),
-            html.P("📌 This section will explore the average time for conversion to Alzheimer's."),
+            html.H3("Disease Progression (Coming Soon)", style={'textAlign': 'center'}),
+            html.P("This section will explore the average time for conversion to Alzheimer's."),
         ])
 
 # Run the app
