@@ -2,33 +2,25 @@ import dash
 from dash import dcc, html, Input, Output
 import pandas as pd
 import plotly.express as px
-from scipy.stats import pearsonr
+import statsmodels.api as sm
 from flask import Flask
 
-# Create Flask server (required for Hugging Face Spaces)
+# Criar servidor Flask
 server = Flask(__name__)
 app = dash.Dash(__name__, server=server)
 
-# Load datasets
+# Carregar dataset cross-sectional
 cross_sectional_path = "oasis_cross-sectional-processed.csv"
 df_cross = pd.read_csv(cross_sectional_path)
 
-# Remove missing values in Educ and MMSE
-df_cross = df_cross.dropna(subset=['Educ', 'MMSE'])
+# Calcular correlações relevantes
+correlations = df_cross[['Educ', 'MMSE', 'CDR', 'eTIV', 'nWBV']].corr()['Educ'].drop('Educ')
 
-# Ensure Educ is an integer (to prevent issues with categories)
-df_cross['Educ'] = df_cross['Educ'].astype(int)
-
-# Compute correlation between Education and MMSE
-corr_value, p_value = pearsonr(df_cross['Educ'], df_cross['MMSE'])
-corr_text = f"The correlation between Education Level and MMSE Score is **{corr_value:.3f}** (p-value = **{p_value:.5f}**)."
-
-# Layout of the dashboard
+# Layout do Dashboard
 app.layout = html.Div([
     html.H1("Alzheimer's Disease Dashboard", style={'textAlign': 'center'}),
 
-    # Dropdown to select between descriptive or predictive analysis
-    html.Label("Select Analysis:"),
+    # Dropdown para selecionar tipo de análise
     dcc.Dropdown(
         id='analysis-type',
         options=[
@@ -39,36 +31,75 @@ app.layout = html.Div([
         clearable=False
     ),
 
-    # Placeholder for analysis content
-    html.Div(id='analysis-content', style={'height': '80vh', 'overflowY': 'scroll'})
+    # Conteúdo dinâmico
+    html.Div(id='analysis-content', style={'margin-top': '20px'})
 ])
 
-# Callback to update the displayed content based on the selected analysis
+# Callback para atualizar o conteúdo
 @app.callback(
     Output('analysis-content', 'children'),
     [Input('analysis-type', 'value')]
 )
-def update_analysis_content(analysis_type):
-    if analysis_type == 'descriptive':
-        # Boxplot - Relationship between Education and MMSE Score
-        fig_education_mmse = px.box(df_cross, x="Educ", y="MMSE", 
-                                    title="Cognitive Function (MMSE) by Education Level",
-                                    labels={"Educ": "Education Level", "MMSE": "MMSE Score"})
+def update_analysis_content(selected_analysis):
+    if selected_analysis == 'descriptive':
+        # Scatter plot de Educ x MMSE
+        fig_educ_mmse = px.scatter(df_cross, x="Educ", y="MMSE", trendline="ols",
+                                   title="Education Level vs. MMSE Score",
+                                   labels={"Educ": "Education Level", "MMSE": "MMSE Score"})
+
+        # Scatter plot de Educ x CDR
+        fig_educ_cdr = px.scatter(df_cross, x="Educ", y="CDR", trendline="ols",
+                                  title="Education Level vs. CDR Score",
+                                  labels={"Educ": "Education Level", "CDR": "CDR Score"})
+
+        # Scatter plot de Educ x eTIV
+        fig_educ_etiv = px.scatter(df_cross, x="Educ", y="eTIV", trendline="ols",
+                                   title="Education Level vs. eTIV",
+                                   labels={"Educ": "Education Level", "eTIV": "Estimated Total Intracranial Volume"})
+
+        # Scatter plot de Educ x nWBV
+        fig_educ_nwbv = px.scatter(df_cross, x="Educ", y="nWBV", trendline="ols",
+                                   title="Education Level vs. Normalized Whole Brain Volume",
+                                   labels={"Educ": "Education Level", "nWBV": "Normalized Brain Volume"})
+
+        # Bar Chart para mostrar os coeficientes de correlação
+        fig_correlation_bar = px.bar(x=correlations.index, y=correlations.values, 
+                                     labels={'x': 'Variable', 'y': 'Correlation Coefficient'},
+                                     title="Correlation between Education and Alzheimer-related Factors")
 
         return html.Div([
-            html.H3("Descriptive Analysis"),
-            
-            html.H4("Education & Alzheimer"),
-            dcc.Graph(figure=fig_education_mmse),
-            html.P("Higher education levels are correlated with better cognitive function (higher MMSE scores)."),
-            html.P(corr_text, style={'font-weight': 'bold'})  # Display correlation value
+            html.H3("Does Education Influence Alzheimer's Risk?"),
+
+            html.P("We analyze how Education Level relates to key indicators of cognitive function and brain health."),
+
+            dcc.Graph(figure=fig_educ_mmse),
+            dcc.Graph(figure=fig_educ_cdr),
+            dcc.Graph(figure=fig_educ_etiv),
+            dcc.Graph(figure=fig_educ_nwbv),
+
+            dcc.Graph(figure=fig_correlation_bar),
+
+            html.Div([
+                html.H4("📌 Key Insights:"),
+                html.P(f"• Educ x MMSE → Correlation: {correlations['MMSE']:.2f} (Weak to Moderate)"),
+                html.P(f"• Educ x CDR → Correlation: {correlations['CDR']:.2f} (Weak)"),
+                html.P(f"• Educ x eTIV → Correlation: {correlations['eTIV']:.2f} (Very Weak)"),
+                html.P(f"• Educ x nWBV → Correlation: {correlations['nWBV']:.2f} (Very Weak)"),
+
+                html.H4("💡 What Does This Mean?"),
+                html.P("The relationship between education and Alzheimer's indicators is weaker than expected. "
+                       "While higher education levels slightly correlate with better MMSE scores, the effect is not strong."),
+            ], style={'padding': '20px', 'border': '1px solid #ddd', 'border-radius': '5px', 'background-color': '#f9f9f9'})
         ])
 
-    elif analysis_type == 'predictive':
-        return html.H3("Predictive Analysis (Placeholder) - We will add graphs here!")
+    elif selected_analysis == 'predictive':
+        return html.Div([
+            html.H3("Predictive Analysis Coming Soon"),
+            html.P("This section will contain predictive modeling results.")
+        ])
 
-    return html.P("Select an analysis from the dropdown above to view results.")
+    return html.P("Select an analysis from the dropdown above.")
 
-# Run the app
+# Rodar o app no Hugging Face Spaces
 if __name__ == "__main__":
     app.run_server(debug=True, host="0.0.0.0", port=7860)
