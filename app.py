@@ -1,5 +1,5 @@
 import dash
-from dash import dcc, html, Input, Output
+from dash import dcc, html, Input, Output, callback_context
 import pandas as pd
 import plotly.express as px
 from flask import Flask
@@ -77,38 +77,50 @@ def update_analysis_dropdown(selected_analysis):
 @app.callback(
     Output('analysis-content', 'children'),
     [Input('analysis-type', 'value'),
-     Input('descriptive-analysis', 'value'),
-     Input('predictive-analysis', 'value')]
+     Input('analysis-options-container', 'children')]
 )
-def update_analysis_content(analysis_type, descriptive_option, predictive_option):
-    if analysis_type == 'descriptive':
-        if descriptive_option == 'ses':
+def update_analysis_content(analysis_type, dropdown_children):
+    ctx = callback_context
+    if not ctx.triggered:
+        return None
+    
+    dropdown_id = ctx.triggered[0]['prop_id'].split('.')[0]
+
+    # Default value if no dropdown exists yet
+    selected_option = None
+    if dropdown_id == 'descriptive-analysis':
+        selected_option = ctx.inputs.get('descriptive-analysis.value', None)
+    elif dropdown_id == 'predictive-analysis':
+        selected_option = ctx.inputs.get('predictive-analysis.value', None)
+
+    if analysis_type == 'descriptive' and selected_option:
+        if selected_option == 'ses':
             fig = px.box(df_cross, x='SES', y='CDR', title='SES & Alzheimer')
             return [dcc.Graph(figure=fig), html.P("Lower SES may be associated with higher dementia risk.")]
-        elif descriptive_option == 'education':
+        elif selected_option == 'education':
             fig = px.box(df_cross, x='Educ', y='MMSE', title='Education & Alzheimer')
             return [dcc.Graph(figure=fig), html.P("Higher education levels are correlated with better cognitive function.")]
-        elif descriptive_option == 'gender':
+        elif selected_option == 'gender':
             fig = px.histogram(df_cross, x='M/F', color='Group', title='Gender & Alzheimer')
             return [dcc.Graph(figure=fig), html.P("Does gender influence Alzheimer’s prevalence?")]
-        elif descriptive_option == 'brain_volume':
+        elif selected_option == 'brain_volume':
             fig = px.box(df_cross, x='Group', y='eTIV', title='Brain Volume & Alzheimer')
             return [dcc.Graph(figure=fig), html.P("Individuals with Alzheimer’s tend to have smaller brain volume.")]
     
-    elif analysis_type == 'predictive':
-        if predictive_option == 'cdr_progression':
+    elif analysis_type == 'predictive' and selected_option:
+        if selected_option == 'cdr_progression':
             fig = px.line(df_long, x='Visit', y='CDR', color='Group', title='CDR Progression Over Time')
             return [dcc.Graph(figure=fig), html.P("How does dementia severity change over time?")]
-        elif predictive_option == 'brain_decline':
+        elif selected_option == 'brain_decline':
             fig = px.line(df_long, x='Visit', y='nWBV', color='Group', title='Brain Volume Decline')
             return [dcc.Graph(figure=fig), html.P("Does brain shrinkage occur faster in Alzheimer’s patients?")]
-        elif predictive_option == 'education_decline':
+        elif selected_option == 'education_decline':
             fig = px.line(df_long, x='Visit', y='MMSE', color='EDUC', title='Education & Cognitive Decline')
             return [dcc.Graph(figure=fig), html.P("Do individuals with higher education maintain cognitive function longer?")]
-        elif predictive_option == 'dementia_conversion':
+        elif selected_option == 'dementia_conversion':
             fig = px.histogram(df_long[df_long['Group'] == 'Converted'], x='Visit', title='Time to Dementia Conversion')
             return [dcc.Graph(figure=fig), html.P("How long does it take for individuals to develop dementia?")]
-        elif predictive_option == 'gender_progression':
+        elif selected_option == 'gender_progression':
             fig = px.line(df_long, x='Visit', y='CDR', color='M/F', title='Gender & Disease Progression')
             return [dcc.Graph(figure=fig), html.P("Does dementia progression differ between men and women?")]
     
