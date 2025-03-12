@@ -3,29 +3,29 @@ import pandas as pd
 import plotly.express as px
 import scipy.stats as stats
 
-# Carregar os datasets
+# Load datasets
 df_cross = pd.read_csv("oasis_cross-sectional-processed.csv")
 df_long = pd.read_csv("oasis_longitudinal-processed.csv")
 
-# Padronizar nomes das colunas para manter consistência
+# Standardize column names
 df_long.rename(columns={"EDUC": "Educ"}, inplace=True)
 df_cross.rename(columns={"EDUC": "Educ"}, inplace=True)
 
-# Criar as colunas Condition corretamente
+# Prepare datasets
 df_long["Condition"] = df_long["Group"]
 df_long = df_long[df_long["Condition"].isin(["Nondemented", "Demented"])]
 df_cross["Condition"] = df_cross["CDR"].apply(lambda x: "Healthy" if x == 0 else "Alzheimer")
 
-# Definir cores personalizadas
+# Define custom color palette
 custom_palette = {"Healthy": "#1f77b4", "Alzheimer": "#ff7f0e", "Nondemented": "#1f77b4", "Demented": "#ff7f0e"}
 
-# Função para gerar gráficos descritivos
+# Function to generate graphs
 def generate_graphs(dataset):
     df = df_cross if dataset == "Cross-Sectional" else df_long
     condition_healthy = "Nondemented" if dataset == "Longitudinal" else "Healthy"
     condition_demented = "Demented" if dataset == "Longitudinal" else "Alzheimer"
 
-    # Gerar gráficos (sem linhas adicionais)
+    # Generate figures
     fig_age = px.histogram(df, x="Age", color="Condition", nbins=15, opacity=0.6, barmode="overlay",
                            title="Age Distribution", color_discrete_map=custom_palette)
 
@@ -41,12 +41,11 @@ def generate_graphs(dataset):
     fig_nwbv_boxplot = px.box(df, x="Condition", y="nWBV", color="Condition",
                                title="Brain Volume Boxplot", color_discrete_map=custom_palette)
 
-    # Cálculo da prevalência por gênero
+    # Calculate gender prevalence
     total_gender_counts = df["M/F"].value_counts()
     demented_gender_counts = df[df["Condition"] == condition_demented]["M/F"].value_counts()
     prevalence_percentage = (demented_gender_counts / total_gender_counts) * 100
 
-    # Gráfico de prevalência de Alzheimer por gênero
     fig_gender_prevalence = px.bar(
         x=prevalence_percentage.index,
         y=prevalence_percentage.values,
@@ -56,7 +55,7 @@ def generate_graphs(dataset):
         color_discrete_map={"M": "#1f77b4", "F": "#ff7f0e"}
     )
 
-    # Calcular p-values
+    # Calculate p-values
     age_pval = stats.ttest_ind(df[df["Condition"] == condition_healthy]["Age"],
                                df[df["Condition"] == condition_demented]["Age"], nan_policy="omit").pvalue
 
@@ -71,21 +70,21 @@ def generate_graphs(dataset):
 
     chi2, gender_pval, _, _ = stats.chi2_contingency(pd.crosstab(df["M/F"], df["Condition"]))
 
-    # Texto de p-value abaixo de cada gráfico correspondente
+    # P-Value Annotations
     p_value_age = f"**p-value: {age_pval:.5f}**"
     p_value_educ = f"**p-value: {educ_pval:.5f}**"
     p_value_ses = f"**p-value: {ses_pval:.5f}**"
     p_value_nwbv = f"**p-value: {nwbv_pval:.5f}**"
     p_value_gender = f"**p-value: {gender_pval:.5f}**"
 
-    return (fig_age, p_value_age, fig_educ, p_value_educ, fig_ses, p_value_ses, 
+    return (fig_age, p_value_age, fig_educ, p_value_educ, fig_ses, p_value_ses,
             fig_gender_prevalence, p_value_gender, fig_nwbv, p_value_nwbv, fig_nwbv_boxplot)
 
-# Criar interface Gradio
+# Create Gradio UI
 with gr.Blocks() as demo:
     gr.Markdown("# Alzheimer Analysis Dashboard")
 
-    dataset_choice = gr.Radio(["Cross-Sectional", "Longitudinal"], value="Cross-Sectional", label="Select Dataset")  # Default = Cross-Sectional
+    dataset_choice = gr.Radio(["Cross-Sectional", "Longitudinal"], value="Cross-Sectional", label="Select Dataset")
 
     with gr.Row():
         with gr.Column():
@@ -110,24 +109,29 @@ with gr.Blocks() as demo:
         with gr.Column():
             output_nwbv_box = gr.Plot(label="Brain Volume Boxplot")
 
-    dataset_choice.change(generate_graphs, 
+    def update_graphs(dataset):
+        """ Update the graphs when dataset is changed """
+        graphs = generate_graphs(dataset)
+        return graphs
+
+    dataset_choice.change(update_graphs, 
                           inputs=dataset_choice, 
-                          outputs=[output_age, output_pval_age, output_educ, output_pval_educ, 
-                                   output_ses, output_pval_ses, output_gender, output_pval_gender, 
+                          outputs=[output_age, output_pval_age, output_educ, output_pval_educ,
+                                   output_ses, output_pval_ses, output_gender, output_pval_gender,
                                    output_nwbv, output_pval_nwbv, output_nwbv_box])
 
-    # Chamar os gráficos do Cross-Sectional ao iniciar
-    initial_graphs = generate_graphs("Cross-Sectional")
-    output_age.update(initial_graphs[0])
-    output_pval_age.update(initial_graphs[1])
-    output_educ.update(initial_graphs[2])
-    output_pval_educ.update(initial_graphs[3])
-    output_ses.update(initial_graphs[4])
-    output_pval_ses.update(initial_graphs[5])
-    output_gender.update(initial_graphs[6])
-    output_pval_gender.update(initial_graphs[7])
-    output_nwbv.update(initial_graphs[8])
-    output_pval_nwbv.update(initial_graphs[9])
-    output_nwbv_box.update(initial_graphs[10])
+    # Load default Cross-Sectional dataset on startup
+    default_graphs = generate_graphs("Cross-Sectional")
+    output_age.render(default_graphs[0])
+    output_pval_age.render(default_graphs[1])
+    output_educ.render(default_graphs[2])
+    output_pval_educ.render(default_graphs[3])
+    output_ses.render(default_graphs[4])
+    output_pval_ses.render(default_graphs[5])
+    output_gender.render(default_graphs[6])
+    output_pval_gender.render(default_graphs[7])
+    output_nwbv.render(default_graphs[8])
+    output_pval_nwbv.render(default_graphs[9])
+    output_nwbv_box.render(default_graphs[10])
 
 demo.launch()
