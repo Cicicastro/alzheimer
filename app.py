@@ -57,11 +57,10 @@ def generate_graphs(df, dataset_name):
 
     # Format p-values
     p_value_text = f"""
-    Age - p-value: {age_pval:.5f}  
-    Education Level - p-value: {educ_pval:.5f}  
-    Socioeconomic Status - p-value: {ses_pval:.5f}  
-    Brain Volume (nWBV) - p-value: {nwbv_pval:.5f}  
-    Gender - p-value: {p_gender:.5f}
+    - **Age p-value:** {f"{age_pval:.5f}" if isinstance(age_pval, (int, float)) else age_pval}
+    - **Education Level p-value:** {f"{educ_pval:.5f}" if isinstance(educ_pval, (int, float)) else educ_pval}
+    - **Socioeconomic Status p-value:** {f"{ses_pval:.5f}" if isinstance(ses_pval, (int, float)) else ses_pval}
+    - **Brain Volume (nWBV) p-value:** {f"{nwbv_pval:.5f}" if isinstance(nwbv_pval, (int, float)) else nwbv_pval}
     """
 
     return [dcc.Graph(figure=fig_age), dcc.Graph(figure=fig_educ), dcc.Graph(figure=fig_ses),
