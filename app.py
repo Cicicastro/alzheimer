@@ -25,18 +25,18 @@ def generate_graphs(dataset):
     condition_healthy = "Nondemented" if dataset == "Longitudinal" else "Healthy"
     condition_demented = "Demented" if dataset == "Longitudinal" else "Alzheimer"
 
-    # Gerar gráficos com linha de tendência (kde=True)
+    # Gerar gráficos (sem linhas adicionais)
     fig_age = px.histogram(df, x="Age", color="Condition", nbins=15, opacity=0.6, barmode="overlay",
-                           title="Age Distribution", color_discrete_map=custom_palette, marginal="rug")
+                           title="Age Distribution", color_discrete_map=custom_palette)
 
     fig_educ = px.histogram(df, x="Educ", color="Condition", nbins=10, opacity=0.6, barmode="overlay",
-                            title="Education Level Distribution", color_discrete_map=custom_palette, marginal="rug")
+                            title="Education Level Distribution", color_discrete_map=custom_palette)
 
     fig_ses = px.histogram(df, x="SES", color="Condition", nbins=5, opacity=0.6, barmode="overlay",
-                           title="Socioeconomic Status Distribution", color_discrete_map=custom_palette, marginal="rug")
+                           title="Socioeconomic Status Distribution", color_discrete_map=custom_palette)
 
     fig_nwbv = px.histogram(df, x="nWBV", color="Condition", nbins=20, opacity=0.6, barmode="overlay",
-                            title="Brain Volume Distribution", color_discrete_map=custom_palette, marginal="rug")
+                            title="Brain Volume Distribution", color_discrete_map=custom_palette)
 
     fig_nwbv_boxplot = px.box(df, x="Condition", y="nWBV", color="Condition",
                                title="Brain Volume Boxplot", color_discrete_map=custom_palette)
@@ -115,5 +115,19 @@ with gr.Blocks() as demo:
                           outputs=[output_age, output_pval_age, output_educ, output_pval_educ, 
                                    output_ses, output_pval_ses, output_gender, output_pval_gender, 
                                    output_nwbv, output_pval_nwbv, output_nwbv_box])
+
+    # Chamar os gráficos do Cross-Sectional ao iniciar
+    initial_graphs = generate_graphs("Cross-Sectional")
+    output_age.update(initial_graphs[0])
+    output_pval_age.update(initial_graphs[1])
+    output_educ.update(initial_graphs[2])
+    output_pval_educ.update(initial_graphs[3])
+    output_ses.update(initial_graphs[4])
+    output_pval_ses.update(initial_graphs[5])
+    output_gender.update(initial_graphs[6])
+    output_pval_gender.update(initial_graphs[7])
+    output_nwbv.update(initial_graphs[8])
+    output_pval_nwbv.update(initial_graphs[9])
+    output_nwbv_box.update(initial_graphs[10])
 
 demo.launch()
