@@ -4,3 +4,4 @@ plotly
 pandas
 statsmodels
 scipy
+dash-bootstrap-components
