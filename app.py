@@ -80,6 +80,9 @@ def generate_graphs(dataset):
     return (fig_age, p_value_age, fig_educ, p_value_educ, fig_ses, p_value_ses,
             fig_gender_prevalence, p_value_gender, fig_nwbv, p_value_nwbv, fig_nwbv_boxplot)
 
+# Load default Cross-Sectional dataset on startup
+default_graphs = generate_graphs("Cross-Sectional")
+
 # Create Gradio UI
 with gr.Blocks() as demo:
     gr.Markdown("# Alzheimer Analysis Dashboard")
@@ -88,26 +91,26 @@ with gr.Blocks() as demo:
 
     with gr.Row():
         with gr.Column():
-            output_age = gr.Plot(label="Age Distribution")
-            output_pval_age = gr.Markdown()
+            output_age = gr.Plot(value=default_graphs[0], label="Age Distribution")
+            output_pval_age = gr.Markdown(value=default_graphs[1])
         with gr.Column():
-            output_educ = gr.Plot(label="Education Level Distribution")
-            output_pval_educ = gr.Markdown()
+            output_educ = gr.Plot(value=default_graphs[2], label="Education Level Distribution")
+            output_pval_educ = gr.Markdown(value=default_graphs[3])
 
     with gr.Row():
         with gr.Column():
-            output_ses = gr.Plot(label="Socioeconomic Status Distribution")
-            output_pval_ses = gr.Markdown()
+            output_ses = gr.Plot(value=default_graphs[4], label="Socioeconomic Status Distribution")
+            output_pval_ses = gr.Markdown(value=default_graphs[5])
         with gr.Column():
-            output_gender = gr.Plot(label="Prevalence of Alzheimer's by Gender")
-            output_pval_gender = gr.Markdown()
+            output_gender = gr.Plot(value=default_graphs[6], label="Prevalence of Alzheimer's by Gender")
+            output_pval_gender = gr.Markdown(value=default_graphs[7])
 
     with gr.Row():
         with gr.Column():
-            output_nwbv = gr.Plot(label="Brain Volume Distribution")
-            output_pval_nwbv = gr.Markdown()
+            output_nwbv = gr.Plot(value=default_graphs[8], label="Brain Volume Distribution")
+            output_pval_nwbv = gr.Markdown(value=default_graphs[9])
         with gr.Column():
-            output_nwbv_box = gr.Plot(label="Brain Volume Boxplot")
+            output_nwbv_box = gr.Plot(value=default_graphs[10], label="Brain Volume Boxplot")
 
     def update_graphs(dataset):
         """ Update the graphs when dataset is changed """
@@ -119,19 +122,5 @@ with gr.Blocks() as demo:
                           outputs=[output_age, output_pval_age, output_educ, output_pval_educ,
                                    output_ses, output_pval_ses, output_gender, output_pval_gender,
                                    output_nwbv, output_pval_nwbv, output_nwbv_box])
-
-    # Load default Cross-Sectional dataset on startup
-    default_graphs = generate_graphs("Cross-Sectional")
-    output_age.render(default_graphs[0])
-    output_pval_age.render(default_graphs[1])
-    output_educ.render(default_graphs[2])
-    output_pval_educ.render(default_graphs[3])
-    output_ses.render(default_graphs[4])
-    output_pval_ses.render(default_graphs[5])
-    output_gender.render(default_graphs[6])
-    output_pval_gender.render(default_graphs[7])
-    output_nwbv.render(default_graphs[8])
-    output_pval_nwbv.render(default_graphs[9])
-    output_nwbv_box.render(default_graphs[10])
 
 demo.launch()
