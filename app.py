@@ -62,20 +62,23 @@ def compute_p_values(df):
     return age_pval, educ_pval, ses_pval, nwbv_pval, p_gender
 
 # Layout do Dashboard
-app.layout = html.Div(
-    style={"overflowY": "auto", "height": "100vh", "padding": "10px"},
-    children=[
-        dcc.Dropdown(
-            id="analysis-type",
-            options=[
-                {"label": "Descriptive Analysis", "value": "descriptive"},
-                {"label": "Predictive Analysis", "value": "predictive"}
-            ],
-            value="descriptive"
-        ),
-        html.Div(id="output-content")
-    ]
-)
+app.layout = html.Div([
+    html.H1("Alzheimer's Disease Dashboard", style={"text-align": "center"}),
+
+    # Dropdown para escolher análise
+    dcc.Dropdown(
+        id="analysis-dropdown",
+        options=[
+            {"label": "Descriptive Analysis", "value": "descriptive"},
+            {"label": "Predictive Analysis", "value": "predictive"}
+        ],
+        value="descriptive",
+        clearable=False
+    ),
+
+    # Div para conter gráficos e p-values
+    html.Div(id="output-container")
+])
 
 # Callback para atualizar gráficos
 @app.callback(
