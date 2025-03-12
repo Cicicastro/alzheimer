@@ -50,14 +50,17 @@ def generate_graphs(df, dataset_name):
     fig_ses = px.histogram(df, x="SES", color="Condition", title=f"{title_prefix} - Socioeconomic Status Distribution", color_discrete_map=custom_palette, nbins=5, histnorm="probability")
     fig_nwbv = px.histogram(df, x="nWBV", color="Condition", title=f"{title_prefix} - Brain Volume (nWBV) Distribution", color_discrete_map=custom_palette, nbins=20, histnorm="probability")
 
-    # Gráfico de barras percentual para gênero
-    gender_counts = df.groupby(["M/F", "Condition"]).size().reset_index(name="Count")
-    gender_counts["Percentage"] = gender_counts.groupby("M/F")["Count"].apply(lambda x: x / x.sum() * 100)
-    fig_gender = px.bar(
-        gender_counts, x="M/F", y="Percentage", color="Condition",
-        title=f"{title_prefix} - Alzheimer Prevalence by Gender",
-        color_discrete_map=custom_palette, barmode="group"
-    )
+# Gráfico de barras percentual para gênero
+gender_counts = df.groupby(["M/F", "Condition"]).size().reset_index(name="Count")
+
+# Ajustar o índice antes de calcular a porcentagem
+gender_counts["Percentage"] = gender_counts.groupby("M/F")["Count"].transform(lambda x: x / x.sum() * 100)
+
+fig_gender = px.bar(
+    gender_counts, x="M/F", y="Percentage", color="Condition",
+    title=f"{title_prefix} - Alzheimer Prevalence by Gender",
+    color_discrete_map=custom_palette, barmode="group"
+)
 
     # Calcular p-values
     age_pval = stats.ttest_ind(df[df["Condition"] == "Healthy"]["Age"], df[df["Condition"] == "Alzheimer"]["Age"], nan_policy="omit").pvalue if "Healthy" in df["Condition"].values else "N/A"
