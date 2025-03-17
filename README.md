@@ -1,2 +1,0 @@
-# alzheimer
-Alzheimer Analysis
