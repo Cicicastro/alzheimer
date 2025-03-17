@@ -1,7 +1,4 @@
-dash
-flask
-plotly
+gradio
 pandas
-statsmodels
+plotly
 scipy
-dash-bootstrap-components
